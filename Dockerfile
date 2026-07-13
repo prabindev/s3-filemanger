@@ -59,6 +59,10 @@ EXPOSE 3000
 
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+ENV DATABASE_URL="file:/app/data/dev.db"
+
+# Create the data directory for SQLite
+RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
 
 # Note: We run db push before starting the server so the sqlite db is initialized on the persistent volume
 CMD prisma db push && node server.js
