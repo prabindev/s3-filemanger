@@ -62,12 +62,13 @@ export async function moveObject(client: S3Client, bucket: string, sourceKey: st
     let continuationToken: string | undefined = undefined;
 
     while (isTruncated) {
-      const listCommand = new ListObjectsV2Command({
-        Bucket: bucket,
-        Prefix: sourceKey,
-        ContinuationToken: continuationToken,
-      });
-      const listResponse = await client.send(listCommand);
+      const listResponse = await client.send(
+        new ListObjectsV2Command({
+          Bucket: bucket,
+          Prefix: sourceKey,
+          ContinuationToken: continuationToken,
+        })
+      );
 
       if (listResponse.Contents && listResponse.Contents.length > 0) {
         // Copy each object
