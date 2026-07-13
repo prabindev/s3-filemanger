@@ -32,7 +32,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error("S3 Test Connection Error:", error);
     return NextResponse.json(
-      { error: "Connection failed. Please check your credentials, region, and bucket name." },
+      { error: `Connection failed: ${error.message}` },
       { status: 400 }
     );
   }
