@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useDropzone } from "react-dropzone";
-import { Folder, File, Download, Trash2, ArrowLeft, Cloud, Database, Grid, List, MoreVertical, FolderPlus, MoveRight, Edit3 } from "lucide-react";
+import { Folder, File, Download, Trash2, ArrowLeft, Cloud, Database, Grid, List, MoreVertical, FolderPlus, MoveRight, Edit3, UploadCloud } from "lucide-react";
 import Link from "next/link";
 
 export default function BucketExplorer({ params }: { params: { id: string } }) {
@@ -81,7 +81,7 @@ export default function BucketExplorer({ params }: { params: { id: string } }) {
     fetchContents();
   }, [currentPrefix, params.id]);
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, noClick: true });
+  const { getRootProps, getInputProps, isDragActive, open } = useDropzone({ onDrop, noClick: true });
 
   const handleCreateFolder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,22 +106,38 @@ export default function BucketExplorer({ params }: { params: { id: string } }) {
     e.preventDefault();
     if (!moveModalOpen) return;
 
-    let finalDest = moveDestPath.replace(/^\/+/, ''); // remove leading slash
-    if (finalDest && !finalDest.endsWith('/')) {
-      finalDest += '/';
-    }
-    
-    const fileName = moveModalOpen.isFolder 
-      ? moveModalOpen.key.replace(currentPrefix, "") 
-      : moveModalOpen.key.split('/').pop();
-      
-    const destKey = `${finalDest}${fileName}`;
+    let destKey = "";
 
+    if (moveModalOpen.renameOnly) {
+      // For rename, moveDestPath is just the new name.
+      // Append it to the current folder path (which is the parent)
+      // Actually, we must append it to the parent of the item being renamed.
+      const parentPrefix = moveModalOpen.key.substring(0, moveModalOpen.key.lastIndexOf('/', moveModalOpen.isFolder ? moveModalOpen.key.length - 2 : undefined) + 1);
+      
+      let cleanNewName = moveDestPath.replace(/^\/+|\/+$/g, '');
+      if (moveModalOpen.isFolder) cleanNewName += '/';
+      
+      destKey = `${parentPrefix}${cleanNewName}`;
+    } else {
+      // For move, moveDestPath is the destination folder path.
+      let finalDest = moveDestPath.replace(/^\/+/, '');
+      if (finalDest && !finalDest.endsWith('/')) {
+        finalDest += '/';
+      }
+      
+      const fileName = moveModalOpen.isFolder 
+        ? moveModalOpen.key.replace(currentPrefix, "") 
+        : moveModalOpen.key.split('/').pop();
+        
+      destKey = `${finalDest}${fileName}`;
+    }
+
+    // Call API (both move and rename use the 'rename' or 'move' action which does the same thing)
     await fetch("/api/s3", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ 
-        action: "move", 
+        action: moveModalOpen.renameOnly ? "rename" : "move", 
         bucketId: params.id, 
         key: moveModalOpen.key,
         destKey: destKey
@@ -201,7 +217,7 @@ export default function BucketExplorer({ params }: { params: { id: string } }) {
   };
 
   return (
-    <div {...getRootProps()} className={`min-h-full flex flex-col relative ${isDragActive ? 'bg-[#0B57D0]/5 dark:bg-[#A8C7FA]/5' : ''}`}>
+    <div {...getRootProps()} className={`flex-1 flex flex-col relative ${isDragActive ? 'bg-[#0B57D0]/5 dark:bg-[#A8C7FA]/5' : ''}`}>
       <input {...getInputProps()} />
       
       {/* Drag Overlay */}
@@ -251,8 +267,14 @@ export default function BucketExplorer({ params }: { params: { id: string } }) {
           </div>
           <div className="w-px h-6 bg-[#E0E0E0] dark:bg-[#444746] mx-1"></div>
           <button 
-            onClick={() => setIsCreateFolderOpen(true)}
+            onClick={open}
             className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-[#37393B] border border-[#747775] dark:border-[#8E918F] hover:bg-[#F8F9FA] dark:hover:bg-[#474A4D] text-[#0B57D0] dark:text-[#A8C7FA] text-sm font-medium rounded-full transition-colors whitespace-nowrap"
+          >
+            <UploadCloud size={18} /> <span className="hidden sm:inline">Upload file</span>
+          </button>
+          <button 
+            onClick={() => setIsCreateFolderOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-[#0B57D0] hover:bg-[#0842A0] dark:bg-[#A8C7FA] dark:text-[#062E6F] dark:hover:bg-[#D3E3FD] text-white text-sm font-medium rounded-full transition-colors whitespace-nowrap"
           >
             <FolderPlus size={18} /> <span className="hidden sm:inline">New folder</span>
           </button>
@@ -306,7 +328,7 @@ export default function BucketExplorer({ params }: { params: { id: string } }) {
                 </div>
                 <div className="divide-y divide-[#E0E0E0] dark:divide-[#444746]">
                   {filteredFiles.map((file) => (
-                    <div key={file.Key} className="grid grid-cols-[1fr_auto_auto_auto] gap-4 p-3 items-center hover:bg-[#F2F6FC] dark:hover:bg-[#303134] transition-colors group cursor-default">
+                    <div key={file.Key} onClick={() => handleDownload(file.Key)} className="grid grid-cols-[1fr_auto_auto_auto] gap-4 p-3 items-center hover:bg-[#F2F6FC] dark:hover:bg-[#303134] transition-colors group cursor-pointer">
                       <div className="flex items-center min-w-0">
                         <File size={20} className="text-[#0B57D0] dark:text-[#A8C7FA] mr-3 shrink-0" />
                         <span className="text-[14px] text-[#1F1F1F] dark:text-[#E3E3E3] truncate">{file.Key.replace(currentPrefix, "")}</span>
@@ -323,7 +345,7 @@ export default function BucketExplorer({ params }: { params: { id: string } }) {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                 {filteredFiles.map((file) => (
-                  <div key={file.Key} className="bg-[#F2F6FC] dark:bg-[#282A2C] rounded-[12px] border border-transparent hover:border-[#E0E0E0] dark:hover:border-[#444746] hover:bg-[#E9EEF6] dark:hover:bg-[#303134] flex flex-col items-center justify-between p-3 aspect-square transition-all relative group cursor-default shadow-sm">
+                  <div key={file.Key} onClick={() => handleDownload(file.Key)} className="bg-[#F2F6FC] dark:bg-[#282A2C] rounded-[12px] border border-transparent hover:border-[#E0E0E0] dark:hover:border-[#444746] hover:bg-[#E9EEF6] dark:hover:bg-[#303134] flex flex-col items-center justify-between p-3 aspect-square transition-all relative group cursor-pointer shadow-sm">
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                       {renderContextMenu(file, false)}
                     </div>
@@ -376,36 +398,47 @@ export default function BucketExplorer({ params }: { params: { id: string } }) {
       {/* Move / Rename Modal */}
       {moveModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-md border border-gray-100 dark:border-gray-700 p-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+          <div className="bg-white dark:bg-[#282A2C] rounded-2xl shadow-xl w-full max-w-md border border-gray-100 dark:border-[#444746] p-6">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-[#E3E3E3] mb-2">
               {moveModalOpen.renameOnly ? "Rename" : "Move to..."}
             </h2>
-            <p className="text-sm text-gray-500 mb-6 truncate">
+            <p className="text-sm text-gray-500 dark:text-[#8E918F] mb-6 truncate">
               {moveModalOpen.key}
             </p>
             <form onSubmit={handleMove}>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  {moveModalOpen.renameOnly ? "New Name (Full Path)" : "Destination Path"}
+                <label className="text-sm font-medium text-gray-700 dark:text-[#C4C7C5]">
+                  {moveModalOpen.renameOnly ? "New Name" : "Destination Path"}
                 </label>
-                <div className="flex items-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3">
-                  <span className="text-gray-400 shrink-0">root/</span>
+                
+                {moveModalOpen.renameOnly ? (
                   <input 
                     autoFocus
                     required 
                     value={moveDestPath} 
                     onChange={e => setMoveDestPath(e.target.value)} 
-                    placeholder={moveModalOpen.renameOnly ? "new-name.txt" : "folder/subfolder/"} 
-                    className="w-full py-2 bg-transparent text-gray-900 dark:text-white outline-none ml-1" 
+                    placeholder="Enter new name" 
+                    className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-[#444746] bg-white dark:bg-[#1E1F20] text-gray-900 dark:text-[#E3E3E3] outline-none" 
                   />
-                </div>
-                {!moveModalOpen.renameOnly && (
-                  <p className="text-xs text-gray-400 mt-1">Leave empty to move to root. Example: `images/`</p>
+                ) : (
+                  <>
+                    <div className="flex items-center rounded-lg border border-gray-300 dark:border-[#444746] bg-white dark:bg-[#1E1F20] px-3 overflow-hidden">
+                      <span className="text-gray-400 dark:text-[#8E918F] shrink-0 font-mono text-sm py-2">/</span>
+                      <input 
+                        autoFocus
+                        value={moveDestPath} 
+                        onChange={e => setMoveDestPath(e.target.value)} 
+                        placeholder="folder/subfolder/" 
+                        className="w-full py-2 bg-transparent text-gray-900 dark:text-[#E3E3E3] outline-none font-mono text-sm" 
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400 dark:text-[#8E918F] mt-1">Leave empty to move to root.</p>
+                  </>
                 )}
               </div>
-              <div className="flex justify-end gap-3 mt-6">
-                <button type="button" onClick={() => { setMoveModalOpen(null); setMoveDestPath(""); }} className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancel</button>
-                <button type="submit" className="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg">Confirm</button>
+              <div className="flex justify-end gap-3 mt-8">
+                <button type="button" onClick={() => { setMoveModalOpen(null); setMoveDestPath(""); }} className="px-4 py-2 text-sm font-medium text-[#444746] dark:text-[#E3E3E3] hover:bg-gray-100 dark:hover:bg-[#37393B] rounded-full transition-colors">Cancel</button>
+                <button type="submit" className="px-5 py-2 text-sm font-medium bg-[#0B57D0] hover:bg-[#0842A0] dark:bg-[#A8C7FA] dark:text-[#062E6F] dark:hover:bg-[#D3E3FD] text-white rounded-full transition-colors">Confirm</button>
               </div>
             </form>
           </div>

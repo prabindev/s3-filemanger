@@ -55,22 +55,65 @@ export async function generateDownloadUrl(client: S3Client, bucket: string, key:
 }
 
 export async function moveObject(client: S3Client, bucket: string, sourceKey: string, destKey: string) {
-  // 1. Copy to new destination
-  await client.send(
-    new CopyObjectCommand({
-      Bucket: bucket,
-      CopySource: `${bucket}/${sourceKey}`,
-      Key: destKey,
-    })
-  );
-  
-  // 2. Delete original
-  await client.send(
-    new DeleteObjectCommand({
-      Bucket: bucket,
-      Key: sourceKey,
-    })
-  );
+  // If moving a folder, we must move all objects with this prefix
+  if (sourceKey.endsWith("/")) {
+    // List all objects in the folder
+    let isTruncated = true;
+    let continuationToken: string | undefined = undefined;
+
+    while (isTruncated) {
+      const listCommand = new ListObjectsV2Command({
+        Bucket: bucket,
+        Prefix: sourceKey,
+        ContinuationToken: continuationToken,
+      });
+      const listResponse = await client.send(listCommand);
+
+      if (listResponse.Contents && listResponse.Contents.length > 0) {
+        // Copy each object
+        for (const obj of listResponse.Contents) {
+          if (!obj.Key) continue;
+          
+          // Calculate new key: replace the old prefix with the new prefix
+          const newObjKey = destKey + obj.Key.substring(sourceKey.length);
+          
+          await client.send(
+            new CopyObjectCommand({
+              Bucket: bucket,
+              CopySource: encodeURI(`${bucket}/${obj.Key}`),
+              Key: newObjKey,
+            })
+          );
+          
+          // Delete original
+          await client.send(
+            new DeleteObjectCommand({
+              Bucket: bucket,
+              Key: obj.Key,
+            })
+          );
+        }
+      }
+      isTruncated = listResponse.IsTruncated ?? false;
+      continuationToken = listResponse.NextContinuationToken;
+    }
+  } else {
+    // Moving a single file
+    await client.send(
+      new CopyObjectCommand({
+        Bucket: bucket,
+        CopySource: encodeURI(`${bucket}/${sourceKey}`),
+        Key: destKey,
+      })
+    );
+    
+    await client.send(
+      new DeleteObjectCommand({
+        Bucket: bucket,
+        Key: sourceKey,
+      })
+    );
+  }
 }
 
 export async function deleteObject(client: S3Client, bucket: string, key: string) {

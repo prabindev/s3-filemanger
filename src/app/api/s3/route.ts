@@ -39,6 +39,11 @@ export async function POST(req: Request) {
         await moveObject(client, bucketConfig.bucketName, key, destKey);
         return NextResponse.json({ success: true });
 
+      case "rename":
+        // destKey should be passed from frontend
+        await moveObject(client, bucketConfig.bucketName, key, destKey);
+        return NextResponse.json({ success: true });
+
       case "delete":
         await deleteObject(client, bucketConfig.bucketName, key);
         return NextResponse.json({ success: true });
