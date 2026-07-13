@@ -50,8 +50,9 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json({ bucket }, { status: 201 });
-  } catch (error) {
-    return NextResponse.json({ error: "Failed to add bucket" }, { status: 500 });
+  } catch (error: any) {
+    console.error("Failed to add bucket:", error);
+    return NextResponse.json({ error: `Failed to add bucket: ${error.message || 'Unknown error'}` }, { status: 500 });
   }
 }
 
