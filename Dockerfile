@@ -53,6 +53,9 @@ RUN npm install -g prisma@6.4.1
 # Copy prisma schema/migrations so we can run push at startup
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
+# Create the data directory for SQLite before switching to non-root user
+RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
+
 USER nextjs
 
 EXPOSE 3000
@@ -60,9 +63,6 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 ENV DATABASE_URL="file:/app/data/dev.db"
-
-# Create the data directory for SQLite
-RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
 
 # Note: We run db push before starting the server so the sqlite db is initialized on the persistent volume
 CMD prisma db push && node server.js
