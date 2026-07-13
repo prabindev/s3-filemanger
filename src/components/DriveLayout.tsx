@@ -72,21 +72,17 @@ export default function DriveLayout({ children }: { children: React.ReactNode })
 
           <nav className="flex flex-col gap-0.5 flex-1 overflow-y-auto hide-scrollbar pl-2 pr-4">
             <NavItem icon={Home} label="Home" href="/dashboard" active={pathname === "/dashboard"} />
-            <NavItem icon={HardDrive} label="My Drive" href="/dashboard" active={pathname === "/dashboard"} />
             
-            {/* Render buckets as sub-items */}
-            <div className="flex flex-col mb-2">
-              {buckets.map(bucket => (
-                <NavItem 
-                  key={bucket.id}
-                  icon={Cloud} 
-                  label={bucket.name} 
-                  href={`/bucket/${bucket.id}`} 
-                  active={pathname === `/bucket/${bucket.id}`} 
-                  isSubItem={true}
-                />
-              ))}
-            </div>
+            {/* Render buckets as main items */}
+            {buckets.map(bucket => (
+              <NavItem 
+                key={bucket.id}
+                icon={HardDrive} 
+                label={bucket.name} 
+                href={`/bucket/${bucket.id}`} 
+                active={pathname.startsWith(`/bucket/${bucket.id}`)} 
+              />
+            ))}
 
             <div className="my-3 mx-4 border-t border-[#E0E0E0] dark:border-[#444746]"></div>
             

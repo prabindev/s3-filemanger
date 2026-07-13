@@ -1,4 +1,4 @@
-import { S3Client, ListObjectsV2Command, DeleteObjectCommand, CopyObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, ListObjectsV2Command, DeleteObjectCommand, CopyObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
 
@@ -115,6 +115,85 @@ export async function moveObject(client: S3Client, bucket: string, sourceKey: st
       })
     );
   }
+}
+
+export async function checkConflicts(client: S3Client, bucket: string, sourceKey: string, destKey: string) {
+  const conflicts = [];
+
+  if (sourceKey.endsWith("/")) {
+    // Fetch all source objects
+    const sourceObjects = new Map<string, any>();
+    let isTruncated = true;
+    let continuationToken: string | undefined = undefined;
+
+    while (isTruncated) {
+      const listResponse: any = await client.send(
+        new ListObjectsV2Command({ Bucket: bucket, Prefix: sourceKey, ContinuationToken: continuationToken })
+      );
+      if (listResponse.Contents) {
+        for (const obj of listResponse.Contents) {
+          if (!obj.Key || obj.Key.endsWith("/")) continue;
+          sourceObjects.set(obj.Key, obj);
+        }
+      }
+      isTruncated = listResponse.IsTruncated ?? false;
+      continuationToken = listResponse.NextContinuationToken;
+    }
+
+    // Fetch all destination objects
+    const destObjects = new Map<string, any>();
+    isTruncated = true;
+    continuationToken = undefined;
+
+    while (isTruncated) {
+      const listResponse: any = await client.send(
+        new ListObjectsV2Command({ Bucket: bucket, Prefix: destKey, ContinuationToken: continuationToken })
+      );
+      if (listResponse.Contents) {
+        for (const obj of listResponse.Contents) {
+          if (!obj.Key || obj.Key.endsWith("/")) continue;
+          destObjects.set(obj.Key, obj);
+        }
+      }
+      isTruncated = listResponse.IsTruncated ?? false;
+      continuationToken = listResponse.NextContinuationToken;
+    }
+
+    // Compare
+    for (const [sKey, sObj] of sourceObjects.entries()) {
+      const expectedDestKey = destKey + sKey.substring(sourceKey.length);
+      const dObj = destObjects.get(expectedDestKey);
+      if (dObj) {
+        conflicts.push({
+          sourceKey: sKey,
+          destKey: expectedDestKey,
+          sourceDate: sObj.LastModified,
+          sourceSize: sObj.Size,
+          destDate: dObj.LastModified,
+          destSize: dObj.Size,
+        });
+      }
+    }
+  } else {
+    // Single file
+    try {
+      const sourceHead = await client.send(new HeadObjectCommand({ Bucket: bucket, Key: sourceKey }));
+      const destHead = await client.send(new HeadObjectCommand({ Bucket: bucket, Key: destKey }));
+      
+      conflicts.push({
+        sourceKey,
+        destKey,
+        sourceDate: sourceHead.LastModified,
+        sourceSize: sourceHead.ContentLength,
+        destDate: destHead.LastModified,
+        destSize: destHead.ContentLength,
+      });
+    } catch (e: any) {
+      // If dest doesn't exist, no conflict.
+    }
+  }
+
+  return conflicts;
 }
 
 export async function deleteObject(client: S3Client, bucket: string, key: string) {

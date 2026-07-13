@@ -22,6 +22,8 @@ export default function BucketExplorer({ params }: { params: { id: string } }) {
   const [newFolderName, setNewFolderName] = useState("");
   const [moveModalOpen, setMoveModalOpen] = useState<any | null>(null);
   const [moveDestPath, setMoveDestPath] = useState("");
+  const [conflictData, setConflictData] = useState<any[] | null>(null);
+  const [pendingMoveReq, setPendingMoveReq] = useState<{sourceKey: string, destKey: string} | null>(null);
 
   const router = useRouter();
 
@@ -102,6 +104,34 @@ export default function BucketExplorer({ params }: { params: { id: string } }) {
     fetchContents();
   };
 
+  const executeMove = async (sourceKey: string, destKey: string) => {
+    await fetch("/api/s3", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "move", bucketId: params.id, key: sourceKey, destKey }),
+    });
+    setMoveModalOpen(null);
+    setMoveDestPath("");
+    setConflictData(null);
+    setPendingMoveReq(null);
+    fetchContents();
+  };
+
+  const checkAndMove = async (sourceKey: string, destKey: string) => {
+    const res = await fetch("/api/s3", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "checkConflicts", bucketId: params.id, key: sourceKey, destKey }),
+    });
+    const data = await res.json();
+    if (data.conflicts && data.conflicts.length > 0) {
+      setConflictData(data.conflicts);
+      setPendingMoveReq({ sourceKey, destKey });
+    } else {
+      await executeMove(sourceKey, destKey);
+    }
+  };
+
   const handleMove = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!moveModalOpen) return;
@@ -132,22 +162,54 @@ export default function BucketExplorer({ params }: { params: { id: string } }) {
       destKey = `${finalDest}${fileName}`;
     }
 
-    // Call API (both move and rename use the 'rename' or 'move' action which does the same thing)
-    await fetch("/api/s3", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        action: moveModalOpen.renameOnly ? "rename" : "move", 
-        bucketId: params.id, 
-        key: moveModalOpen.key,
-        destKey: destKey
-      }),
-    });
-
-    setMoveModalOpen(null);
-    setMoveDestPath("");
-    fetchContents();
+    await checkAndMove(moveModalOpen.key, destKey);
   };
+
+  const handleInternalDrop = async (e: React.DragEvent, destPrefix: string) => {
+    e.preventDefault();
+    const sourceKey = e.dataTransfer.getData("sourceKey");
+    const isFolderStr = e.dataTransfer.getData("isFolder");
+    if (!sourceKey || sourceKey === destPrefix) return;
+    
+    if (isFolderStr === "true" && destPrefix.startsWith(sourceKey)) {
+      alert("Cannot move a folder into itself.");
+      return;
+    }
+
+    const isFolder = isFolderStr === "true";
+    let finalDest = destPrefix.replace(/^\/+/, '');
+    if (finalDest && !finalDest.endsWith('/')) finalDest += '/';
+
+    const fileName = isFolder 
+      ? sourceKey.replace(currentPrefix, "").replace(/\/$/, '') 
+      : sourceKey.split('/').pop();
+
+    let destKey = `${finalDest}${fileName}`;
+    if (isFolder) destKey += '/';
+
+    await checkAndMove(sourceKey, destKey);
+  };
+
+  const dragProps = (key: string, isFolder: boolean) => ({
+    draggable: true,
+    onDragStart: (e: React.DragEvent) => {
+      e.dataTransfer.setData("sourceKey", key);
+      e.dataTransfer.setData("isFolder", isFolder.toString());
+      e.stopPropagation();
+    }
+  });
+
+  const dropProps = (destPrefix: string) => ({
+    onDragOver: (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    },
+    onDrop: (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      handleInternalDrop(e, destPrefix);
+    }
+  });
 
   const handleDelete = async (key: string) => {
     if (!confirm("Are you sure you want to delete this?")) return;
@@ -295,18 +357,18 @@ export default function BucketExplorer({ params }: { params: { id: string } }) {
             <h2 className="text-[14px] font-medium text-[#444746] dark:text-[#E3E3E3] mb-3">Folders</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {currentPrefix && (
-                <div onClick={navigateUp} className="bg-[#F2F6FC] dark:bg-[#282A2C] rounded-[12px] p-3 flex items-center cursor-pointer hover:bg-[#E9EEF6] dark:hover:bg-[#303134] transition-colors group">
+                <div onClick={navigateUp} {...dropProps(currentPrefix.split("/").filter(Boolean).slice(0, -1).join("/") + (currentPrefix.split("/").filter(Boolean).length > 1 ? "/" : ""))} className="bg-[#F2F6FC] dark:bg-[#282A2C] rounded-[12px] p-3 flex items-center cursor-pointer hover:bg-[#E9EEF6] dark:hover:bg-[#303134] transition-colors group">
                   <Folder size={24} className="text-[#444746] dark:text-[#C4C7C5] mr-3" />
                   <span className="text-[14px] font-medium text-[#1F1F1F] dark:text-[#E3E3E3]">..</span>
                 </div>
               )}
               {filteredFolders.map((folder) => (
-                <div key={folder.Prefix} onClick={() => navigateToFolder(folder.Prefix)} className="bg-[#F2F6FC] dark:bg-[#282A2C] rounded-[12px] p-3 flex items-center justify-between cursor-pointer hover:bg-[#E9EEF6] dark:hover:bg-[#303134] transition-colors group">
+                <div key={folder.Prefix} onClick={() => navigateToFolder(folder.Prefix)} {...dragProps(folder.Prefix, true)} {...dropProps(folder.Prefix)} className="bg-[#F2F6FC] dark:bg-[#282A2C] rounded-[12px] p-3 flex items-center justify-between cursor-pointer hover:bg-[#E9EEF6] dark:hover:bg-[#303134] transition-colors group">
                   <div className="flex items-center flex-1 min-w-0">
                     <Folder size={24} className="text-[#444746] dark:text-[#C4C7C5] mr-3 fill-current opacity-80" />
                     <span className="text-[14px] font-medium text-[#1F1F1F] dark:text-[#E3E3E3] truncate pr-2">{folder.Prefix.replace(currentPrefix, "").replace("/", "")}</span>
                   </div>
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className={`transition-opacity ${activeMenu === folder.Prefix ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                     {renderContextMenu(folder, true)}
                   </div>
                 </div>
@@ -328,14 +390,14 @@ export default function BucketExplorer({ params }: { params: { id: string } }) {
                 </div>
                 <div className="divide-y divide-[#E0E0E0] dark:divide-[#444746]">
                   {filteredFiles.map((file) => (
-                    <div key={file.Key} onClick={() => handleDownload(file.Key)} className="grid grid-cols-[1fr_auto_auto_auto] gap-4 p-3 items-center hover:bg-[#F2F6FC] dark:hover:bg-[#303134] transition-colors group cursor-pointer">
+                    <div key={file.Key} onClick={() => handleDownload(file.Key)} {...dragProps(file.Key, false)} className="grid grid-cols-[1fr_auto_auto_auto] gap-4 p-3 items-center hover:bg-[#F2F6FC] dark:hover:bg-[#303134] transition-colors group cursor-pointer">
                       <div className="flex items-center min-w-0">
                         <File size={20} className="text-[#0B57D0] dark:text-[#A8C7FA] mr-3 shrink-0" />
                         <span className="text-[14px] text-[#1F1F1F] dark:text-[#E3E3E3] truncate">{file.Key.replace(currentPrefix, "")}</span>
                       </div>
                       <div className="w-24 text-[13px] text-[#444746] dark:text-[#C4C7C5] text-right hidden sm:block">{(file.Size / 1024).toFixed(1)} KB</div>
                       <div className="w-32 text-[13px] text-[#444746] dark:text-[#C4C7C5] text-right hidden md:block">{new Date(file.LastModified).toLocaleDateString()}</div>
-                      <div className="w-8 flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className={`w-8 flex justify-end transition-opacity ${activeMenu === file.Key ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                         {renderContextMenu(file, false)}
                       </div>
                     </div>
@@ -345,8 +407,8 @@ export default function BucketExplorer({ params }: { params: { id: string } }) {
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
                 {filteredFiles.map((file) => (
-                  <div key={file.Key} onClick={() => handleDownload(file.Key)} className="bg-[#F2F6FC] dark:bg-[#282A2C] rounded-[12px] border border-transparent hover:border-[#E0E0E0] dark:hover:border-[#444746] hover:bg-[#E9EEF6] dark:hover:bg-[#303134] flex flex-col items-center justify-between p-3 aspect-square transition-all relative group cursor-pointer shadow-sm">
-                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                  <div key={file.Key} onClick={() => handleDownload(file.Key)} {...dragProps(file.Key, false)} className="bg-[#F2F6FC] dark:bg-[#282A2C] rounded-[12px] border border-transparent hover:border-[#E0E0E0] dark:hover:border-[#444746] hover:bg-[#E9EEF6] dark:hover:bg-[#303134] flex flex-col items-center justify-between p-3 aspect-square transition-all relative group cursor-pointer shadow-sm">
+                    <div className={`absolute top-2 right-2 transition-opacity z-10 ${activeMenu === file.Key ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
                       {renderContextMenu(file, false)}
                     </div>
                     <div className="flex-1 w-full flex items-center justify-center bg-white dark:bg-[#1E1F20] rounded-lg mt-1 mb-3">
@@ -391,6 +453,62 @@ export default function BucketExplorer({ params }: { params: { id: string } }) {
                 <button type="submit" className="px-4 py-2 text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-lg">Create</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Conflict Resolution Modal */}
+      {conflictData && pendingMoveReq && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-[#282A2C] rounded-2xl shadow-xl w-full max-w-lg border border-gray-100 dark:border-[#444746] p-6">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-[#E3E3E3] mb-4">File Conflict Detected</h2>
+            <p className="text-sm text-gray-700 dark:text-[#C4C7C5] mb-6">
+              {conflictData.length === 1 
+                ? "An item with the same name already exists in this location." 
+                : `${conflictData.length} items with the same names already exist in this location.`}
+            </p>
+            
+            <div className="max-h-64 overflow-y-auto space-y-4 mb-6">
+              {conflictData.map((conflict, i) => (
+                <div key={i} className="border border-gray-200 dark:border-[#444746] rounded-lg p-3 text-sm">
+                  <div className="font-medium text-[#1F1F1F] dark:text-[#E3E3E3] mb-2 truncate" title={conflict.destKey}>
+                    {conflict.destKey}
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 text-xs">
+                    <div>
+                      <div className="text-gray-500 mb-1">Existing File</div>
+                      <div className="text-gray-900 dark:text-gray-300">{(conflict.destSize / 1024).toFixed(1)} KB</div>
+                      <div className="text-gray-900 dark:text-gray-300">{new Date(conflict.destDate).toLocaleString()}</div>
+                    </div>
+                    <div>
+                      <div className="text-blue-500 mb-1">New File</div>
+                      <div className="text-gray-900 dark:text-gray-300">{(conflict.sourceSize / 1024).toFixed(1)} KB</div>
+                      <div className="text-gray-900 dark:text-gray-300">{new Date(conflict.sourceDate).toLocaleString()}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={() => {
+                  setConflictData(null);
+                  setPendingMoveReq(null);
+                }} 
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-[#A8C7FA] hover:bg-gray-100 dark:hover:bg-[#303134] rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  executeMove(pendingMoveReq.sourceKey, pendingMoveReq.destKey);
+                }} 
+                className="px-4 py-2 text-sm font-medium bg-[#0B57D0] hover:bg-[#0842A0] dark:bg-[#A8C7FA] dark:text-[#062E6F] dark:hover:bg-[#D3E3FD] text-white rounded-lg transition-colors"
+              >
+                {conflictData.length === 1 ? "Replace" : "Replace All"}
+              </button>
+            </div>
           </div>
         </div>
       )}
