@@ -18,6 +18,7 @@ export function verifyPassword(password: string, storedHash: string): boolean {
 }
 
 export const authOptions: NextAuthOptions = {
+  secret: process.env.NEXTAUTH_SECRET || "fallback_development_secret_please_change_me",
   providers: [
     CredentialsProvider({
       name: "Credentials",
