@@ -59,7 +59,7 @@ RUN mkdir -p /app/database && chown nextjs:nodejs /app/database
 # Persist the database directory automatically
 VOLUME ["/app/database"]
 
-USER nextjs
+# USER nextjs
 
 EXPOSE 3000
 
