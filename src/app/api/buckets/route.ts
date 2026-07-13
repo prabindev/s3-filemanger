@@ -16,8 +16,9 @@ export async function GET(req: Request) {
     });
 
     return NextResponse.json({ buckets: user?.buckets || [] });
-  } catch (error) {
-    return NextResponse.json({ error: "Failed to fetch buckets" }, { status: 500 });
+  } catch (error: any) {
+    console.error("Failed to fetch buckets:", error);
+    return NextResponse.json({ error: `Failed to fetch buckets: ${error.message || 'Unknown error'}` }, { status: 500 });
   }
 }
 
