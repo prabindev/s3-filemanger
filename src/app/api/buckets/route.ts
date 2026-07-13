@@ -54,3 +54,47 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Failed to add bucket" }, { status: 500 });
   }
 }
+
+export async function PUT(req: Request) {
+  const session = await getServerSession(authOptions);
+  const userId = (session?.user as any)?.id;
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
+    const data = await req.json();
+    const { id, name, provider, endpoint, region, accessKey, secretKey, bucketName } = data;
+
+    if (!id || !name || !provider || !region || !accessKey || !secretKey || !bucketName) {
+      return NextResponse.json({ error: "All fields except endpoint are required" }, { status: 400 });
+    }
+
+    // Verify ownership
+    const existingBucket = await prisma.bucketConfig.findUnique({
+      where: { id },
+    });
+
+    if (!existingBucket || existingBucket.userId !== userId) {
+      return NextResponse.json({ error: "Bucket not found or unauthorized" }, { status: 404 });
+    }
+
+    const bucket = await prisma.bucketConfig.update({
+      where: { id },
+      data: {
+        name,
+        provider,
+        endpoint,
+        region,
+        accessKey,
+        secretKey,
+        bucketName,
+      },
+    });
+
+    return NextResponse.json({ bucket }, { status: 200 });
+  } catch (error) {
+    console.error("Update error:", error);
+    return NextResponse.json({ error: "Failed to update bucket" }, { status: 500 });
+  }
+}

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import styles from "./dashboard.module.css";
-import { Plus, Server, Database, Cloud } from "lucide-react";
+import { Plus, Server, Database, Cloud, Edit2, Play, CheckCircle, XCircle } from "lucide-react";
 
 export default function DashboardPage() {
   const [buckets, setBuckets] = useState<any[]>([]);
@@ -13,6 +13,10 @@ export default function DashboardPage() {
   const router = useRouter();
 
   // New bucket form state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [testStatus, setTestStatus] = useState<'idle'|'testing'|'success'|'error'>('idle');
+  const [testMessage, setTestMessage] = useState('');
+  
   const [formData, setFormData] = useState({
     name: "",
     provider: "AWS",
@@ -43,18 +47,65 @@ export default function DashboardPage() {
     fetchBuckets();
   }, []);
 
-  const handleAddBucket = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleOpenEdit = (bucket: any, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingId(bucket.id);
+    setFormData({
+      name: bucket.name,
+      provider: bucket.provider,
+      endpoint: bucket.endpoint || "",
+      region: bucket.region,
+      accessKey: bucket.accessKey,
+      secretKey: bucket.secretKey,
+      bucketName: bucket.bucketName,
+    });
+    setTestStatus('idle');
+    setIsModalOpen(true);
+  };
+
+  const handleOpenAdd = () => {
+    setEditingId(null);
+    setFormData({
+      name: "", provider: "AWS", endpoint: "", region: "",
+      accessKey: "", secretKey: "", bucketName: ""
+    });
+    setTestStatus('idle');
+    setIsModalOpen(true);
+  };
+
+  const handleTestConnection = async () => {
+    setTestStatus('testing');
     try {
-      const res = await fetch("/api/buckets", {
+      const res = await fetch("/api/buckets/test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),
       });
+      const data = await res.json();
+      if (res.ok) {
+        setTestStatus('success');
+        setTestMessage(data.message);
+      } else {
+        setTestStatus('error');
+        setTestMessage(data.error || "Connection failed.");
+      }
+    } catch (error) {
+      setTestStatus('error');
+      setTestMessage("Network error during test.");
+    }
+  };
+
+  const handleAddOrEditBucket = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch("/api/buckets", {
+        method: editingId ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...formData, id: editingId }),
+      });
       if (res.ok) {
         setIsModalOpen(false);
         fetchBuckets();
-        setFormData({ ...formData, name: "", bucketName: "" }); // Reset some fields
       }
     } catch (error) {
       console.error(error);
@@ -75,7 +126,7 @@ export default function DashboardPage() {
     <div className={styles.container}>
       <div className={styles.header}>
         <h1 className={styles.title}>Your Buckets</h1>
-        <button className={styles.button} onClick={() => setIsModalOpen(true)}>
+        <button className={styles.button} onClick={handleOpenAdd}>
           <Plus size={20} style={{ display: 'inline', verticalAlign: 'middle', marginRight: '8px' }} />
           Add Bucket
         </button>
@@ -84,7 +135,7 @@ export default function DashboardPage() {
       {buckets.length === 0 ? (
         <div className={styles.emptyState}>
           <p>You haven't added any S3 buckets yet.</p>
-          <button className={styles.button} style={{ marginTop: '1rem' }} onClick={() => setIsModalOpen(true)}>
+          <button className={styles.button} style={{ marginTop: '1rem' }} onClick={handleOpenAdd}>
             Add your first bucket
           </button>
         </div>
@@ -94,9 +145,18 @@ export default function DashboardPage() {
             <div key={bucket.id} className={styles.card} onClick={() => router.push(`/bucket/${bucket.id}`)}>
               <div className={styles.cardHeader}>
                 <h3 className={styles.cardTitle}>{bucket.name}</h3>
-                <span className={styles.providerBadge}>
-                  {getProviderIcon(bucket.provider)} {bucket.provider}
-                </span>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <span className={styles.providerBadge}>
+                    {getProviderIcon(bucket.provider)} {bucket.provider}
+                  </span>
+                  <button 
+                    onClick={(e) => handleOpenEdit(bucket, e)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280' }}
+                    title="Edit bucket"
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                </div>
               </div>
               <div className={styles.cardDetails}>
                 <p>Bucket: {bucket.bucketName}</p>
@@ -146,9 +206,36 @@ export default function DashboardPage() {
                 <input required value={formData.bucketName} onChange={e => setFormData({...formData, bucketName: e.target.value})} />
               </div>
 
-              <div className={styles.modalActions}>
+              {testStatus !== 'idle' && (
+                <div style={{ 
+                  padding: '10px', 
+                  borderRadius: '6px', 
+                  marginBottom: '15px', 
+                  fontSize: '0.875rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  backgroundColor: testStatus === 'success' ? '#def7ec' : testStatus === 'error' ? '#fde8e8' : '#e5edff',
+                  color: testStatus === 'success' ? '#03543f' : testStatus === 'error' ? '#9b1c1c' : '#1e429f' 
+                }}>
+                  {testStatus === 'success' && <CheckCircle size={16} />}
+                  {testStatus === 'error' && <XCircle size={16} />}
+                  {testStatus === 'testing' && <Play size={16} />}
+                  {testStatus === 'testing' ? "Testing connection..." : testMessage}
+                </div>
+              )}
+
+              <div className={styles.modalActions} style={{ display: 'flex', gap: '10px' }}>
                 <button type="button" className={styles.cancelButton} onClick={() => setIsModalOpen(false)}>Cancel</button>
-                <button type="submit" className={styles.button}>Save Configuration</button>
+                <button 
+                  type="button" 
+                  style={{ padding: '0.5rem 1rem', background: '#4b5563', color: 'white', borderRadius: '6px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }} 
+                  onClick={handleTestConnection}
+                  disabled={testStatus === 'testing'}
+                >
+                  <Play size={16} /> Test Connection
+                </button>
+                <button type="submit" className={styles.button}>{editingId ? 'Save Changes' : 'Add Configuration'}</button>
               </div>
             </form>
           </div>
