@@ -6,20 +6,25 @@ export default withAuth(
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
     
-    // If the user is logged in and trying to access login/signup, redirect to dashboard
-    if (token && (path === '/login' || path === '/signup')) {
+    const isAuthRoute = path === '/login' || path === '/signup';
+
+    // If logged in and trying to access login/signup -> go to dashboard
+    if (token && isAuthRoute) {
       return NextResponse.redirect(new URL('/dashboard', req.url));
+    }
+
+    // If NOT logged in and trying to access protected routes -> go to login
+    if (!token && !isAuthRoute && path !== '/') {
+      return NextResponse.redirect(new URL('/login', req.url));
     }
   },
   {
     callbacks: {
-      // Let the middleware function handle all routing logic
       authorized: () => true 
     }
   }
 );
 
-// Only run the middleware on these specific routes
 export const config = {
-  matcher: ['/login', '/signup']
+  matcher: ['/login', '/signup', '/dashboard/:path*', '/bucket/:path*']
 };
