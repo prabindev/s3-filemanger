@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus, Server, Database, Cloud, Edit2, Play, CheckCircle, XCircle, LogOut } from "lucide-react";
+import { Plus, Server, Database, Cloud, Edit2, Play, CheckCircle, XCircle, LogOut, Folder, MoreVertical, Trash2 } from "lucide-react";
 import { signOut } from "next-auth/react";
 
 export default function DashboardPage() {
