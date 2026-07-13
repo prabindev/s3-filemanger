@@ -201,155 +201,151 @@ export default function BucketExplorer({ params }: { params: { id: string } }) {
   };
 
   return (
-    <div {...getRootProps()} className={`min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col ${isDragActive ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}>
+    <div {...getRootProps()} className={`min-h-full flex flex-col relative ${isDragActive ? 'bg-[#0B57D0]/5 dark:bg-[#A8C7FA]/5' : ''}`}>
       <input {...getInputProps()} />
       
       {/* Drag Overlay */}
       {isDragActive && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-blue-500/20 backdrop-blur-sm border-4 border-blue-500 border-dashed m-4 rounded-3xl pointer-events-none">
-          <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-2xl flex flex-col items-center gap-4 animate-bounce">
-            <Cloud size={48} className="text-blue-500" />
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Drop files to upload</h2>
-            <p className="text-gray-500">to /{currentPrefix}</p>
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/80 dark:bg-[#1E1F20]/80 backdrop-blur-sm border-[3px] border-[#0B57D0] dark:border-[#A8C7FA] border-dashed m-2 rounded-[20px] pointer-events-none">
+          <div className="flex flex-col items-center gap-3 bg-white dark:bg-[#282A2C] px-8 py-6 rounded-2xl shadow-xl">
+            <Cloud size={48} className="text-[#0B57D0] dark:text-[#A8C7FA]" />
+            <h2 className="text-xl font-medium text-[#1F1F1F] dark:text-[#E3E3E3]">Drop files to upload</h2>
+            <p className="text-sm text-[#444746] dark:text-[#C4C7C5]">to {currentPrefix ? `/${currentPrefix}` : 'root'}</p>
           </div>
         </div>
       )}
 
-      {/* Header Area */}
-      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 sticky top-0 z-40 shadow-sm">
-        <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      {/* Drive Action Bar & Breadcrumbs */}
+      <div className="sticky top-0 z-30 bg-white dark:bg-[#1E1F20] px-4 md:px-6 pt-4 pb-2 border-b border-[#E0E0E0] dark:border-[#444746] flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        
+        {/* Breadcrumbs */}
+        <div className="flex items-center gap-1 text-[18px] sm:text-[22px] text-[#1F1F1F] dark:text-[#E3E3E3] overflow-x-auto hide-scrollbar whitespace-nowrap">
+          <Link href="/dashboard" className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors mr-1">
+            <ArrowLeft size={24} className="text-[#444746] dark:text-[#E3E3E3]" />
+          </Link>
+          <button onClick={() => fetchContents("")} className="px-2 py-1 rounded-md hover:bg-black/5 dark:hover:bg-white/10 transition-colors font-medium">
+            My Drive
+          </button>
           
-          {/* Breadcrumbs */}
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 overflow-x-auto whitespace-nowrap pb-1 sm:pb-0 w-full md:w-auto hide-scrollbar">
-            <Link href="/dashboard" className="p-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors">
-              <ArrowLeft size={20} />
-            </Link>
-            <span className="text-gray-400 font-light">/</span>
-            <button onClick={() => fetchContents("")} className="px-2 py-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium">
-              root
-            </button>
-            
-            {currentPrefix.split("/").filter(Boolean).map((part, idx, arr) => (
-              <div key={idx} className="flex items-center gap-2">
-                <span className="text-gray-400 font-light">/</span>
-                <button 
-                  onClick={() => navigateToFolder(arr.slice(0, idx+1).join("/") + "/")}
-                  className="px-2 py-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-blue-600 dark:hover:text-blue-400 transition-colors font-medium"
-                >
-                  {part}
-                </button>
-              </div>
-            ))}
-          </div>
+          {currentPrefix.split("/").filter(Boolean).map((part, idx, arr) => (
+            <div key={idx} className="flex items-center gap-1">
+              <span className="text-[#747775] dark:text-[#8E918F] font-light">&rsaquo;</span>
+              <button 
+                onClick={() => navigateToFolder(arr.slice(0, idx+1).join("/") + "/")}
+                className="px-2 py-1 rounded-md hover:bg-black/5 dark:hover:bg-white/10 transition-colors font-medium"
+              >
+                {part}
+              </button>
+            </div>
+          ))}
+        </div>
 
-          <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
-            <div className="w-full sm:w-64">
-              <input 
-                type="text" 
-                placeholder="Search in folder..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-              />
-            </div>
-            <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
-              <button onClick={() => setViewMode('list')} className={`p-1.5 rounded-md transition-colors ${viewMode === 'list' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'}`}>
-                <List size={18} />
-              </button>
-              <button onClick={() => setViewMode('grid')} className={`p-1.5 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-white dark:bg-gray-600 shadow-sm text-gray-900 dark:text-white' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'}`}>
-                <Grid size={18} />
-              </button>
-            </div>
-            <button 
-              onClick={() => setIsCreateFolderOpen(true)}
-              className="flex items-center gap-2 px-3 py-2 bg-gray-900 dark:bg-gray-700 hover:bg-gray-800 dark:hover:bg-gray-600 text-white text-sm font-medium rounded-lg transition-colors whitespace-nowrap"
-            >
-              <FolderPlus size={16} /> <span className="hidden sm:inline">New Folder</span>
+        <div className="flex items-center gap-2 self-end sm:self-auto">
+          <div className="flex bg-[#E9EEF6] dark:bg-[#282A2C] rounded-full p-0.5">
+            <button onClick={() => setViewMode('list')} className={`p-2 rounded-full transition-colors ${viewMode === 'list' ? 'bg-white dark:bg-[#37393B] shadow-sm text-[#1F1F1F] dark:text-[#E3E3E3]' : 'text-[#444746] dark:text-[#C4C7C5] hover:bg-white/50 dark:hover:bg-[#37393B]/50'}`}>
+              <List size={20} />
+            </button>
+            <button onClick={() => setViewMode('grid')} className={`p-2 rounded-full transition-colors ${viewMode === 'grid' ? 'bg-white dark:bg-[#37393B] shadow-sm text-[#1F1F1F] dark:text-[#E3E3E3]' : 'text-[#444746] dark:text-[#C4C7C5] hover:bg-white/50 dark:hover:bg-[#37393B]/50'}`}>
+              <Grid size={20} />
             </button>
           </div>
+          <div className="w-px h-6 bg-[#E0E0E0] dark:bg-[#444746] mx-1"></div>
+          <button 
+            onClick={() => setIsCreateFolderOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-[#37393B] border border-[#747775] dark:border-[#8E918F] hover:bg-[#F8F9FA] dark:hover:bg-[#474A4D] text-[#0B57D0] dark:text-[#A8C7FA] text-sm font-medium rounded-full transition-colors whitespace-nowrap"
+          >
+            <FolderPlus size={18} /> <span className="hidden sm:inline">New folder</span>
+          </button>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 max-w-[1400px] mx-auto w-full p-4 sm:p-6 lg:p-8">
+      <div className="flex-1 w-full p-4 md:p-6 lg:p-8 min-h-[50vh]">
         
-        {viewMode === 'list' ? (
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-visible">
-            <div className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-              
+        {loading && (
+          <div className="flex items-center justify-center h-32">
+            <div className="animate-spin h-6 w-6 border-2 border-[#0B57D0] dark:border-[#A8C7FA] border-t-transparent rounded-full" />
+          </div>
+        )}
+
+        {!loading && filteredFolders.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-[14px] font-medium text-[#444746] dark:text-[#E3E3E3] mb-3">Folders</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {currentPrefix && (
-                <div onClick={navigateUp} className="flex items-center p-3 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer transition-colors group">
-                  <Folder size={20} className="text-gray-400 mr-4" />
-                  <span className="font-medium text-gray-700 dark:text-gray-300">..</span>
+                <div onClick={navigateUp} className="bg-[#F2F6FC] dark:bg-[#282A2C] rounded-[12px] p-3 flex items-center cursor-pointer hover:bg-[#E9EEF6] dark:hover:bg-[#303134] transition-colors group">
+                  <Folder size={24} className="text-[#444746] dark:text-[#C4C7C5] mr-3" />
+                  <span className="text-[14px] font-medium text-[#1F1F1F] dark:text-[#E3E3E3]">..</span>
                 </div>
               )}
-
               {filteredFolders.map((folder) => (
-                <div key={folder.Prefix} onClick={() => navigateToFolder(folder.Prefix)} className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-750 cursor-pointer transition-colors group">
-                  <div className="flex items-center flex-1">
-                    <Folder size={20} className="text-blue-500 dark:text-blue-400 mr-4" fill="currentColor" fillOpacity={0.2} />
-                    <span className="font-medium text-gray-800 dark:text-gray-200">{folder.Prefix.replace(currentPrefix, "").replace("/", "")}</span>
+                <div key={folder.Prefix} onClick={() => navigateToFolder(folder.Prefix)} className="bg-[#F2F6FC] dark:bg-[#282A2C] rounded-[12px] p-3 flex items-center justify-between cursor-pointer hover:bg-[#E9EEF6] dark:hover:bg-[#303134] transition-colors group">
+                  <div className="flex items-center flex-1 min-w-0">
+                    <Folder size={24} className="text-[#444746] dark:text-[#C4C7C5] mr-3 fill-current opacity-80" />
+                    <span className="text-[14px] font-medium text-[#1F1F1F] dark:text-[#E3E3E3] truncate pr-2">{folder.Prefix.replace(currentPrefix, "").replace("/", "")}</span>
                   </div>
-                  {renderContextMenu(folder, true)}
-                </div>
-              ))}
-
-              {filteredFiles.map((file) => (
-                <div key={file.Key} className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors group cursor-default">
-                  <div className="flex items-center flex-1 min-w-0 pr-4">
-                    <File size={20} className="text-gray-400 dark:text-gray-500 mr-4 flex-shrink-0" />
-                    <span className="truncate text-gray-700 dark:text-gray-300">{file.Key.replace(currentPrefix, "")}</span>
-                  </div>
-                  <div className="flex items-center gap-6">
-                    <span className="text-sm text-gray-500 dark:text-gray-400 w-24 text-right hidden sm:block">{(file.Size / 1024).toFixed(1)} KB</span>
-                    <span className="text-sm text-gray-400 w-28 text-right hidden md:block">{new Date(file.LastModified).toLocaleDateString()}</span>
-                    {renderContextMenu(file, false)}
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                    {renderContextMenu(folder, true)}
                   </div>
                 </div>
               ))}
             </div>
           </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-            {currentPrefix && (
-              <div onClick={navigateUp} className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:border-blue-500 hover:shadow-md cursor-pointer flex flex-col items-center justify-center gap-2 aspect-square transition-all group">
-                <Folder size={48} className="text-gray-300 group-hover:text-blue-400 transition-colors" />
-                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">..</span>
+        )}
+
+        {!loading && filteredFiles.length > 0 && (
+          <div>
+            <h2 className="text-[14px] font-medium text-[#444746] dark:text-[#E3E3E3] mb-3">Files</h2>
+            {viewMode === 'list' ? (
+              <div className="border border-[#E0E0E0] dark:border-[#444746] rounded-xl overflow-hidden bg-white dark:bg-[#282A2C]">
+                <div className="grid grid-cols-[1fr_auto_auto_auto] gap-4 p-3 border-b border-[#E0E0E0] dark:border-[#444746] bg-[#F8F9FA] dark:bg-[#131314] text-[13px] font-medium text-[#444746] dark:text-[#C4C7C5]">
+                  <div>Name</div>
+                  <div className="w-24 text-right hidden sm:block">File size</div>
+                  <div className="w-32 text-right hidden md:block">Last modified</div>
+                  <div className="w-8"></div>
+                </div>
+                <div className="divide-y divide-[#E0E0E0] dark:divide-[#444746]">
+                  {filteredFiles.map((file) => (
+                    <div key={file.Key} className="grid grid-cols-[1fr_auto_auto_auto] gap-4 p-3 items-center hover:bg-[#F2F6FC] dark:hover:bg-[#303134] transition-colors group cursor-default">
+                      <div className="flex items-center min-w-0">
+                        <File size={20} className="text-[#0B57D0] dark:text-[#A8C7FA] mr-3 shrink-0" />
+                        <span className="text-[14px] text-[#1F1F1F] dark:text-[#E3E3E3] truncate">{file.Key.replace(currentPrefix, "")}</span>
+                      </div>
+                      <div className="w-24 text-[13px] text-[#444746] dark:text-[#C4C7C5] text-right hidden sm:block">{(file.Size / 1024).toFixed(1)} KB</div>
+                      <div className="w-32 text-[13px] text-[#444746] dark:text-[#C4C7C5] text-right hidden md:block">{new Date(file.LastModified).toLocaleDateString()}</div>
+                      <div className="w-8 flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
+                        {renderContextMenu(file, false)}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                {filteredFiles.map((file) => (
+                  <div key={file.Key} className="bg-[#F2F6FC] dark:bg-[#282A2C] rounded-[12px] border border-transparent hover:border-[#E0E0E0] dark:hover:border-[#444746] hover:bg-[#E9EEF6] dark:hover:bg-[#303134] flex flex-col items-center justify-between p-3 aspect-square transition-all relative group cursor-default shadow-sm">
+                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                      {renderContextMenu(file, false)}
+                    </div>
+                    <div className="flex-1 w-full flex items-center justify-center bg-white dark:bg-[#1E1F20] rounded-lg mt-1 mb-3">
+                      <File size={48} className="text-[#0B57D0] dark:text-[#A8C7FA] opacity-50" />
+                    </div>
+                    <div className="w-full flex items-center gap-2">
+                      <File size={16} className="text-[#0B57D0] dark:text-[#A8C7FA] shrink-0" />
+                      <p className="text-[13px] font-medium text-[#1F1F1F] dark:text-[#E3E3E3] truncate w-full" title={file.Key.replace(currentPrefix, "")}>{file.Key.replace(currentPrefix, "")}</p>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
-            
-            {filteredFolders.map((folder) => (
-              <div key={folder.Prefix} onClick={() => navigateToFolder(folder.Prefix)} className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:border-blue-500 hover:shadow-md cursor-pointer flex flex-col items-center justify-center gap-3 aspect-square transition-all relative group">
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {renderContextMenu(folder, true)}
-                </div>
-                <Folder size={48} className="text-blue-500 dark:text-blue-400" fill="currentColor" fillOpacity={0.2} />
-                <span className="text-sm font-medium text-gray-800 dark:text-gray-200 text-center truncate w-full">{folder.Prefix.replace(currentPrefix, "").replace("/", "")}</span>
-              </div>
-            ))}
-
-            {filteredFiles.map((file) => (
-              <div key={file.Key} className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-md flex flex-col items-center justify-center gap-3 aspect-square transition-all relative group">
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {renderContextMenu(file, false)}
-                </div>
-                <File size={48} className="text-gray-400 dark:text-gray-500" />
-                <div className="w-full text-center">
-                  <p className="text-sm text-gray-700 dark:text-gray-300 truncate w-full" title={file.Key.replace(currentPrefix, "")}>{file.Key.replace(currentPrefix, "")}</p>
-                  <p className="text-xs text-gray-400 mt-1">{(file.Size / 1024).toFixed(1)} KB</p>
-                </div>
-              </div>
-            ))}
           </div>
         )}
 
         {!loading && filteredFiles.length === 0 && filteredFolders.length === 0 && !currentPrefix && (
-          <div className="mt-20 flex flex-col items-center justify-center text-center">
-            <div className="bg-gray-100 dark:bg-gray-800 p-6 rounded-full mb-4">
-              <Database size={48} className="text-gray-300 dark:text-gray-600" />
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">Your bucket is empty</h3>
-            <p className="text-gray-500 dark:text-gray-400">Drag and drop files anywhere on this page to upload.</p>
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <img src="https://ssl.gstatic.com/docs/doclist/images/empty_state_my_drive_v3.svg" alt="Empty Folder" className="w-64 mb-6 opacity-80" />
+            <h3 className="text-[22px] text-[#1F1F1F] dark:text-[#E3E3E3] mb-2 font-medium">A place for all of your files</h3>
+            <p className="text-[14px] text-[#444746] dark:text-[#C4C7C5]">Drag and drop files or folders here to upload them to your S3 bucket.</p>
           </div>
         )}
       </div>
