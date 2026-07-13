@@ -1,0 +1,176 @@
+.container {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: 'Inter', sans-serif;
+  color: #111827;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.breadcrumbs {
+  font-size: 1.25rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.breadcrumbLink {
+  cursor: pointer;
+  color: #2563eb;
+}
+
+.breadcrumbLink:hover {
+  text-decoration: underline;
+}
+
+.breadcrumbSeparator {
+  color: #9ca3af;
+}
+
+.actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.searchBar {
+  padding: 0.5rem 1rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  min-width: 250px;
+}
+
+.dropzone {
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  padding: 3rem;
+  text-align: center;
+  margin-bottom: 2rem;
+  background-color: #f9fafb;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.dropzoneActive {
+  border-color: #2563eb;
+  background-color: #eff6ff;
+}
+
+.dropzoneText {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.fileList {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.fileRow {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  transition: background-color 0.15s;
+}
+
+.fileRow:last-child {
+  border-bottom: none;
+}
+
+.fileRow:hover {
+  background-color: #f9fafb;
+}
+
+.fileIcon {
+  margin-right: 1rem;
+  color: #6b7280;
+}
+
+.folderIcon {
+  color: #3b82f6;
+}
+
+.fileName {
+  flex: 1;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.fileSize {
+  color: #6b7280;
+  font-size: 0.875rem;
+  width: 100px;
+  text-align: right;
+  margin-right: 2rem;
+}
+
+.fileDate {
+  color: #6b7280;
+  font-size: 0.875rem;
+  width: 150px;
+}
+
+.fileActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.actionButton {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+}
+
+.actionButton:hover {
+  color: #111827;
+  background-color: #e5e7eb;
+}
+
+.deleteButton:hover {
+  color: #ef4444;
+}
+
+@media (prefers-color-scheme: dark) {
+  .container {
+    color: #f9fafb;
+  }
+  .searchBar {
+    background: #374151;
+    border-color: #4b5563;
+    color: white;
+  }
+  .dropzone {
+    background-color: #1f2937;
+    border-color: #374151;
+  }
+  .dropzoneActive {
+    background-color: rgba(37, 99, 235, 0.2);
+  }
+  .fileList {
+    background: #1f2937;
+    border-color: #374151;
+  }
+  .fileRow {
+    border-color: #374151;
+  }
+  .fileRow:hover {
+    background-color: #111827;
+  }
+  .actionButton:hover {
+    color: #f9fafb;
+    background-color: #374151;
+  }
+}

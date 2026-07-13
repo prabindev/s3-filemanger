@@ -1,0 +1,34 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  password      String
+  twoFaSecret   String?
+  twoFaEnabled  Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  buckets       BucketConfig[]
+}
+
+model BucketConfig {
+  id          String   @id @default(uuid())
+  name        String
+  provider    String   // e.g., "AWS", "Cloudflare", "GCP"
+  endpoint    String
+  region      String
+  accessKey   String
+  secretKey   String
+  bucketName  String
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
