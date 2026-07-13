@@ -11,7 +11,25 @@ A premium, minimal, and professional web application for managing files across v
 - **File Management**: Move, delete, and download files.
 - **Authentication**: Secure NextAuth login backed by SQLite.
 
-## Getting Started
+## Deployment on Dokploy (or any Docker environment)
+
+This repository includes a `Dockerfile` optimized for Next.js standalone mode and Prisma.
+
+### Dokploy Setup:
+
+1. Create a new **Application** in Dokploy.
+2. Connect this GitHub repository.
+3. In the environment variables section, make sure to set:
+   ```env
+   NEXTAUTH_SECRET=your_super_secret_key
+   NEXTAUTH_URL=https://your-dokploy-domain.com
+   DATABASE_URL=file:/app/data/dev.db
+   ```
+4. **Persistent Volume (Crucial for SQLite)**: 
+   In Dokploy's "Volumes" or "Mounts" configuration, mount a host directory to `/app/data` inside the container. This ensures your user accounts and S3 configs are saved when the container restarts.
+5. Deploy! The Dockerfile will automatically run `npx prisma db push` to initialize the database before starting the Next.js server.
+
+## Getting Started (Local Development)
 
 ### Prerequisites
 
