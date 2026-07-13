@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useDropzone } from "react-dropzone";
-import { Folder, File, Download, Trash2, ArrowLeft } from "lucide-react";
+import { Folder, File, Download, Trash2, ArrowLeft, Cloud, Database } from "lucide-react";
 import Link from "next/link";
 
 export default function BucketExplorer({ params }: { params: { id: string } }) {
