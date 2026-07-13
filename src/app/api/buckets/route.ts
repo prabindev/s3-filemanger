@@ -23,7 +23,8 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
+  const userId = (session?.user as any)?.id;
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -44,7 +45,7 @@ export async function POST(req: Request) {
         accessKey,
         secretKey,
         bucketName,
-        userId: session.user.id,
+        userId: userId,
       },
     });
 

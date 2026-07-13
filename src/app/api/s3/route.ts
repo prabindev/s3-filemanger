@@ -14,11 +14,12 @@ async function getAuthorizedBucket(bucketId: string, userId: string) {
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const userId = (session?.user as any)?.id;
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   try {
     const { action, bucketId, prefix, key, destKey, contentType } = await req.json();
-    const bucketConfig = await getAuthorizedBucket(bucketId, session.user.id);
+    const bucketConfig = await getAuthorizedBucket(bucketId, userId);
     const client = getS3Client(bucketConfig);
 
     switch (action) {
