@@ -62,7 +62,7 @@ export async function moveObject(client: S3Client, bucket: string, sourceKey: st
     let continuationToken: string | undefined = undefined;
 
     while (isTruncated) {
-      const listResponse = await client.send(
+      const listResponse: any = await client.send(
         new ListObjectsV2Command({
           Bucket: bucket,
           Prefix: sourceKey,
