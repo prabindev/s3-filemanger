@@ -81,3 +81,15 @@ export async function deleteObject(client: S3Client, bucket: string, key: string
     })
   );
 }
+
+export async function createFolder(client: S3Client, bucket: string, key: string) {
+  // To create a folder in S3, we simply create a 0-byte object with a trailing slash
+  const folderKey = key.endsWith("/") ? key : `${key}/`;
+  await client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: folderKey,
+      Body: "",
+    })
+  );
+}

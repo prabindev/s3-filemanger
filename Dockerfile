@@ -56,6 +56,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 # Create the data directory for SQLite before switching to non-root user
 RUN mkdir -p /app/data && chown nextjs:nodejs /app/data
 
+# Persist the data directory automatically
+VOLUME ["/app/data"]
+
 USER nextjs
 
 EXPOSE 3000

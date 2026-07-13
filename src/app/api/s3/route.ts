@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import prisma from "@/lib/prisma";
-import { getS3Client, listObjects, generateUploadUrl, generateDownloadUrl, moveObject, deleteObject } from "@/lib/s3";
+import { getS3Client, listObjects, generateUploadUrl, generateDownloadUrl, moveObject, deleteObject, createFolder } from "@/lib/s3";
 
 async function getAuthorizedBucket(bucketId: string, userId: string) {
   const bucket = await prisma.bucketConfig.findFirst({
@@ -41,6 +41,10 @@ export async function POST(req: Request) {
 
       case "delete":
         await deleteObject(client, bucketConfig.bucketName, key);
+        return NextResponse.json({ success: true });
+
+      case "createFolder":
+        await createFolder(client, bucketConfig.bucketName, key);
         return NextResponse.json({ success: true });
 
       default:
