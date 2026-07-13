@@ -10,6 +10,7 @@ export default function DashboardPage() {
   const [buckets, setBuckets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const router = useRouter();
 
   // New bucket form state
