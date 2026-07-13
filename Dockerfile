@@ -65,4 +65,4 @@ ENV HOSTNAME="0.0.0.0"
 ENV DATABASE_URL="file:/app/data/dev.db"
 
 # Note: We run db push before starting the server so the sqlite db is initialized on the persistent volume
-CMD prisma db push && node server.js
+CMD prisma db push --skip-generate && node server.js
