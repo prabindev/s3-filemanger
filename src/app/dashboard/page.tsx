@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus, Server, Database, Cloud, Edit2, Play, CheckCircle, XCircle } from "lucide-react";
+import { Plus, Server, Database, Cloud, Edit2, Play, CheckCircle, XCircle, LogOut } from "lucide-react";
+import { signOut } from "next-auth/react";
 
 export default function DashboardPage() {
   const [buckets, setBuckets] = useState<any[]>([]);
@@ -126,13 +127,22 @@ export default function DashboardPage() {
       <div className="max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Your Buckets</h1>
-          <button 
-            onClick={handleOpenAdd}
-            className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm transition-colors"
-          >
-            <Plus size={20} className="mr-2" />
-            Add Bucket
-          </button>
+          <div className="flex gap-4">
+            <button 
+              onClick={() => signOut({ callbackUrl: '/login' })}
+              className="flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-lg shadow-sm transition-colors"
+            >
+              <LogOut size={20} className="mr-2" />
+              Sign Out
+            </button>
+            <button 
+              onClick={handleOpenAdd}
+              className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm transition-colors"
+            >
+              <Plus size={20} className="mr-2" />
+              Add Bucket
+            </button>
+          </div>
         </div>
 
         {buckets.length === 0 ? (
