@@ -113,6 +113,20 @@ export default function DashboardPage() {
     }
   };
 
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this bucket configuration?")) return;
+    try {
+      const res = await fetch("/api/buckets", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      if (res.ok) fetchBuckets();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   const getProviderIcon = (provider: string) => {
     switch (provider) {
       case "AWS": return <Cloud size={16} />;
