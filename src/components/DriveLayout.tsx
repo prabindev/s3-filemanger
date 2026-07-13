@@ -57,10 +57,10 @@ export default function DriveLayout({ children }: { children: React.ReactNode })
       {/* Sidebar */}
       <aside className={`fixed md:static inset-y-0 left-0 z-40 w-64 bg-[#F8F9FA] dark:bg-[#131314] transform transition-transform duration-200 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
         <div className="p-4 h-full flex flex-col">
-          <div className="flex items-center gap-2 px-2 mb-6 cursor-pointer">
+          <Link href="/dashboard" className="flex items-center gap-2 px-2 mb-6 cursor-pointer">
             <Cloud className="text-[#1967D2]" size={36} fill="#1967D2" fillOpacity={0.1} />
             <span className="text-[22px] text-[#444746] dark:text-[#E3E3E3] font-medium">Drive</span>
-          </div>
+          </Link>
           
           <div className="px-2 mb-6">
             {/* The Plus button in sidebar could link to Dashboard to add bucket or a general action */}
@@ -71,8 +71,6 @@ export default function DriveLayout({ children }: { children: React.ReactNode })
           </div>
 
           <nav className="flex flex-col gap-0.5 flex-1 overflow-y-auto hide-scrollbar pl-2 pr-4">
-            <NavItem icon={Home} label="Home" href="/dashboard" active={pathname === "/dashboard"} />
-            
             {/* Render buckets as main items */}
             {buckets.map(bucket => (
               <NavItem 
